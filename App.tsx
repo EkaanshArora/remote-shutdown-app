@@ -1,24 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { Button, SafeAreaView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView, Text, TextInput, View } from 'react-native';
 import { MMKV } from 'react-native-mmkv'
 import Toast from 'react-native-toast-message';
-import Setup from './Setup';
+import Button from './src/Button';
+import Setup from './src/Setup';
 
 const storage = new MMKV()
 
 const Shutdown: React.FC = () => {
-  const [settingsPanel, setSettingsPanel] =  useState(false)
+  const [settingsPanel, setSettingsPanel] = useState(false)
   let ip: string, password: string
-  
-  useEffect(()=>{
+
+  useEffect(() => {
     const ip2 = storage.getString('ip')
-    if(ip2) {
+    if (ip2) {
       ip = ip2
     } else {
       setSettingsPanel(true)
     }
     const password2 = storage.getString('password')
-    if(password2) {
+    if (password2) {
       password = password2
     } else {
       setSettingsPanel(true)
@@ -47,16 +48,19 @@ const Shutdown: React.FC = () => {
   return (
     <>
       <SafeAreaView>
-      <Text style={{textAlign: 'center', margin: 10, fontSize: 22, fontWeight: '700'}}>Shutdown Remote</Text>
+        <Text style={{ textAlign: 'center', margin: 10, fontSize: 26, fontWeight: '700', marginBottom: '20%'}}>Shutdown Remote</Text>
         <View style={{ flexDirection: 'row', margin: 10, justifyContent: 'space-around' }}>
-          <Button onPress={() => request('Turn screen off')} title='screen off' />
-          <Button onPress={() => request('suspend')} title='sleep' color='#ffbb00' />
-          <Button onPress={() => request('shutdown')} title='shutdown' color='#ff1157' />
+          <Button onPress={() => request('screen')} title='Screen Off' />
+          <Button onPress={() => request('sleep')} title='Sleep' color='#ffbb00' />
+        </View>
+        <View style={{ flexDirection: 'row', margin: 10, justifyContent: 'space-around' }}>
+          <Button onPress={() => request('shutdown')} title='Shutdown' color='#ff1157' />
+          <Button onPress={() => request('restart')} title='Restart' color='#00da55' />
         </View>
         {settingsPanel ?
           <Setup setSettingsPanel={setSettingsPanel} /> :
           <>
-            <Text style={{textAlign: 'center', marginTop: 50}}>Sending request to {storage.getString('ip')}, with password '{storage.getString('password')}'</Text>
+            <Text style={{ textAlign: 'center', marginTop: 50 }}>Sending request to {storage.getString('ip')}, with password '{storage.getString('password')}'</Text>
             <View style={{ flexDirection: 'row', margin: 10, justifyContent: 'space-around' }}>
               <Button title='Change' onPress={() => { setSettingsPanel(!settingsPanel) }} />
             </View>
