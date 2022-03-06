@@ -1,16 +1,30 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, {useEffect, useState} from 'react';
-import {SafeAreaView, Text, View} from 'react-native';
-import {MMKV} from 'react-native-mmkv';
+import React, { useEffect, useState } from 'react';
+import { SafeAreaView, Text, View } from 'react-native';
+import { MMKV } from 'react-native-mmkv';
 import Toast from 'react-native-toast-message';
 import Button from './src/Button';
 import Setup from './src/Setup';
+import Zeroconf from 'react-native-zeroconf'
+
+const zeroconf = new Zeroconf()
 
 const storage = new MMKV();
 
 const Shutdown: React.FC = () => {
   const [settingsPanel, setSettingsPanel] = useState(false);
   let ip: string, password: string;
+
+  useEffect(() => {
+    zeroconf.scan('http')
+    zeroconf.getServices()
+    zeroconf.on('found', (e) => {
+      console.log('found', e)
+    })
+    zeroconf.on('resolved', (e) => {
+      console.log('resolved', e)
+    })
+  }, [])
 
   useEffect(() => {
     const ip2 = storage.getString('ip');
@@ -98,7 +112,7 @@ const Shutdown: React.FC = () => {
           <Setup setSettingsPanel={setSettingsPanel} />
         ) : (
           <>
-            <Text style={{textAlign: 'center', marginTop: 50, marginBottom: 10}}>
+            <Text style={{ textAlign: 'center', marginTop: 50, marginBottom: 10 }}>
               Sending request to {storage.getString('ip')}, with password '
               {storage.getString('password')}'
             </Text>
