@@ -13,37 +13,62 @@ const storage = new MMKV();
 
 const Shutdown: React.FC = () => {
   const [settingsPanel, setSettingsPanel] = useState(false);
-  let ip: string, password: string;
+  const [IPs, setIPs] = useState<string[]>([]);
+  const [requestIP, setRequestIP] = useState('');
+  const [password, setPassword] = useState('');
+  const [port, setPort] = useState('');
 
   useEffect(() => {
-    zeroconf.scan('http')
-    zeroconf.getServices()
-    zeroconf.on('found', (e) => {
-      console.log('found', e)
-    })
-    zeroconf.on('resolved', (e) => {
-      console.log('resolved', e)
-    })
-  }, [])
-
-  useEffect(() => {
-    const ip2 = storage.getString('ip');
-    if (ip2) {
-      ip = ip2;
+    const cacheIP = storage.getString('ip');
+    if (cacheIP) {
+      setRequestIP(cacheIP);
     } else {
       setSettingsPanel(true);
     }
-    const password2 = storage.getString('password');
-    if (password2) {
-      password = password2;
+    const cachePassword = storage.getString('password');
+    if (cachePassword) {
+      setPassword(cachePassword);
+    } else {
+      setSettingsPanel(true);
+    }
+    const cachePort = storage.getString('port');
+    if (cachePort) {
+      setPort(cachePort);
     } else {
       setSettingsPanel(true);
     }
   }, [settingsPanel]);
 
+  useEffect(() => {
+    console.log('calling ue')
+    zeroconf.scan('http')
+    zeroconf.on('start', () => {
+      console.log('start')
+    })
+    zeroconf.getServices()
+    zeroconf.on('found', (e) => {
+      console.log('found', e)
+    })
+    zeroconf.on('resolved', (e) => {
+      console.log('resolved', e.addresses, !IPs.includes(e.addresses[0]), IPs)
+      e.addresses.map(ip => {
+        if (ip.startsWith('192')) {
+          if (!IPs.includes(e.addresses[0])) {
+            console.log('adding')
+            setIPs(p => [...p, e.addresses[0]]);
+          }
+        }
+      })
+    })
+    return(()=>{
+      console.log('cleanup')
+      zeroconf.removeDeviceListeners()
+    })
+  }, [])
+
   const request = (mode: string) => {
-    console.log(`http://${ip}/${password}/${mode}`);
-    fetch(`http://${ip}/${password}/${mode}`)
+    console.log(`http://${requestIP}:${port}/${password}/${mode}`);
+    fetch(`http://${requestIP}:${port}/${password}/${mode}`)
       .then(e => {
         console.log(e);
         Toast.show({
@@ -112,9 +137,14 @@ const Shutdown: React.FC = () => {
           <Setup setSettingsPanel={setSettingsPanel} />
         ) : (
           <>
-            <Text style={{ textAlign: 'center', marginTop: 50, marginBottom: 10 }}>
-              Sending request to {storage.getString('ip')}, with password '
-              {storage.getString('password')}'
+            <Text
+              style={{
+                textAlign: 'center',
+                marginTop: 50,
+                margin: 40,
+                marginBottom: 10,
+              }}>
+              Sending request to {`http://${requestIP}:${port}`} with password "{storage.getString('password')}"
             </Text>
             <View
               style={{
@@ -131,6 +161,20 @@ const Shutdown: React.FC = () => {
             </View>
           </>
         )}
+        <View style={{marginTop: 'auto', marginBottom: '20%'}}>
+          <Text>PCs found:</Text>
+          {IPs.map((pc, index) => {
+            return (
+              <Text
+                onPress={() => {
+                  setRequestIP(pc);
+                }}
+                key={index}>
+                {pc}
+              </Text>
+            );
+          })}
+        </View>
       </SafeAreaView>
       <Toast position="bottom" />
     </>

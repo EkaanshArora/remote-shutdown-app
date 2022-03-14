@@ -8,39 +8,54 @@ const storage = new MMKV();
 const Setup = (props: {
   setSettingsPanel: Dispatch<SetStateAction<boolean>>;
 }) => {
-  const [ip, setIp] = useState('');
+  const [IP, setIP] = useState('');
+  const [port, setPort] = useState('5001');
   const [password, setPassword] = useState('');
   const {setSettingsPanel} = props;
 
   useEffect(() => {
-    const ip = storage.getString('ip');
-    if (ip) {
-      setIp(ip);
+    const ipCache = storage.getString('ip');
+    if (ipCache) {
+      setIP(ipCache);
     }
-    const password = storage.getString('password');
-    if (password) {
-      setPassword(password);
+    const passwordCache = storage.getString('password');
+    if (passwordCache) {
+      setPassword(passwordCache);
+    }
+    const portCache = storage.getString('port');
+    if (portCache) {
+      setPort(portCache);
     }
   }, []);
 
   const save = () => {
-    storage.set('ip', ip);
+    storage.set('ip', IP);
     storage.set('password', password);
-    console.log(ip, password);
-    if (ip && password) {
+    storage.set('port', port);
+    console.log(IP, password, port);
+    if (IP && password && port) {
       setSettingsPanel(false);
     } else {
       console.error('cant save');
     }
   };
+
   return (
     <View style={{marginHorizontal: 10, marginVertical: 20}}>
-      <Text>IP (host:port)</Text>
+      <Text>IP (host)</Text>
       <TextInput
-        value={ip}
+        value={IP}
         style={{borderBottomWidth: 1, marginBottom: 15, marginTop: 5}}
         onChangeText={text => {
-          setIp(text);
+          setIP(text);
+        }}
+      />
+      <Text>Port</Text>
+      <TextInput
+        value={port}
+        style={{borderBottomWidth: 1, marginBottom: 15, marginTop: 5}}
+        onChangeText={text => {
+          setPort(text);
         }}
       />
       <Text>Password</Text>
@@ -57,5 +72,6 @@ const Setup = (props: {
     </View>
   );
 };
+
 
 export default Setup;
