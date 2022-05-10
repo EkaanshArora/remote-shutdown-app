@@ -1,13 +1,20 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, { useEffect, useState } from 'react';
-import { SafeAreaView, Text, View } from 'react-native';
-import { MMKV } from 'react-native-mmkv';
+import React, {useEffect, useRef, useState} from 'react';
+import {
+  AppState,
+  SafeAreaView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {MMKV} from 'react-native-mmkv';
 import Toast from 'react-native-toast-message';
 import Button from './src/Button';
 import Setup from './src/Setup';
-import Zeroconf from 'react-native-zeroconf'
+import Zeroconf from 'react-native-zeroconf';
+import Clipboard from '@react-native-community/clipboard';
 
-const zeroconf = new Zeroconf()
+const zeroconf = new Zeroconf();
 
 const storage = new MMKV();
 
@@ -17,6 +24,27 @@ const Shutdown: React.FC = () => {
   const [requestIP, setRequestIP] = useState('');
   const [password, setPassword] = useState('');
   const [port, setPort] = useState('');
+  const appState = useRef(AppState.currentState);
+  const [appStateVisible, setAppStateVisible] = useState(appState.current);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('App has come to the foreground!');
+      }
+
+      appState.current = nextAppState;
+      setAppStateVisible(appState.current);
+      console.log('AppState', appState.current);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const cacheIP = storage.getString('ip');
@@ -40,41 +68,58 @@ const Shutdown: React.FC = () => {
   }, [settingsPanel]);
 
   useEffect(() => {
-    console.log('calling ue')
-    zeroconf.scan('http')
+    if (appStateVisible === 'active') {
+      setIPs([]);
+      zeroconf.scan();
+    }
+  }, [appStateVisible]);
+
+  useEffect(() => {
+    console.log('calling ue');
     zeroconf.on('start', () => {
-      console.log('start')
-    })
-    zeroconf.getServices()
-    zeroconf.on('found', (e) => {
-      console.log('found', e)
-    })
-    zeroconf.on('resolved', (e) => {
-      console.log('resolved', e.addresses, !IPs.includes(e.addresses[0]), IPs)
+      console.log('start');
+    });
+    zeroconf.on('found', e => {
+      console.log('found', e);
+    });
+    zeroconf.on('resolved', e => {
+      console.log('resolved', e.addresses, !IPs.includes(e.addresses[0]), IPs);
       e.addresses.map(ip => {
         if (ip.startsWith('192')) {
           if (!IPs.includes(e.addresses[0])) {
-            console.log('adding')
+            console.log('adding');
             setIPs(p => [...p, e.addresses[0]]);
           }
         }
-      })
-    })
-    return(()=>{
-      console.log('cleanup')
-      zeroconf.removeDeviceListeners()
-    })
-  }, [])
+      });
+    });
+    return () => {
+      console.log('cleanup');
+      zeroconf.removeDeviceListeners();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const request = (mode: string) => {
     console.log(`http://${requestIP}:${port}/${password}/${mode}`);
     fetch(`http://${requestIP}:${port}/${password}/${mode}`)
-      .then(e => {
-        console.log(e);
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Sent request successfully 👋',
+      .then(res => {
+        res.json().then(data => {
+          console.log(data);
+          if (data.data) {
+            Clipboard.setString(data.data);
+            Toast.show({
+              type: 'success',
+              text1: data.data,
+              text2: 'Sent request successfully 👋',
+            });
+          } else {
+            Toast.show({
+              type: 'success',
+              text1: 'Success',
+              text2: 'Sent request successfully 👋',
+            });
+          }
         });
       })
       .catch(e => {
@@ -89,10 +134,11 @@ const Shutdown: React.FC = () => {
 
   return (
     <>
-      <SafeAreaView style={{
-        backgroundColor: '#fff',
-        height: '100%'
-      }}>
+      <SafeAreaView
+        style={{
+          backgroundColor: '#fff',
+          height: '100%',
+        }}>
         <Text
           style={{
             textAlign: 'center',
@@ -109,12 +155,12 @@ const Shutdown: React.FC = () => {
             margin: 10,
             justifyContent: 'space-around',
           }}>
-          <Button onPress={() => request('screen')} title="Screen Off" />
           <Button
-            onPress={() => request('sleep')}
-            title="Sleep"
-            color="#ffbb00"
+            onPress={() => request('clip')}
+            title="Clipboard"
+            color="#ff99ff"
           />
+          <Button onPress={() => request('screen')} title="Screen Off" />
         </View>
         <View
           style={{
@@ -122,6 +168,11 @@ const Shutdown: React.FC = () => {
             margin: 10,
             justifyContent: 'space-around',
           }}>
+          <Button
+            onPress={() => request('sleep')}
+            title="Sleep"
+            color="#ffbb00"
+          />
           <Button
             onPress={() => request('shutdown')}
             title="Shutdown"
@@ -144,7 +195,8 @@ const Shutdown: React.FC = () => {
                 margin: 40,
                 marginBottom: 10,
               }}>
-              Sending request to {`http://${requestIP}:${port}`} with password "{storage.getString('password')}"
+              Sending request to {`http://${requestIP}:${port}`} with password "
+              {storage.getString('password')}"
             </Text>
             <View
               style={{
@@ -165,13 +217,13 @@ const Shutdown: React.FC = () => {
           <Text>PCs found:</Text>
           {IPs.map((pc, index) => {
             return (
-              <Text
+              <TouchableOpacity
+                key={index}
                 onPress={() => {
                   setRequestIP(pc);
-                }}
-                key={index}>
-                {pc}
-              </Text>
+                }}>
+                <Text> {pc} </Text>
+              </TouchableOpacity>
             );
           })}
         </View>

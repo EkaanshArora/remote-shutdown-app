@@ -10,6 +10,7 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
+    "@react-native-community/clipboard": "^1.5.1",
     "react": "17.0.2",
     "react-native": "0.66.4",
     "react-native-mmkv": "^2.0.0",
