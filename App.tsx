@@ -89,6 +89,7 @@ const Shutdown: React.FC = () => {
           if (!IPs.includes(e.addresses[0])) {
             console.log('adding');
             setIPs(p => [...p, e.addresses[0]]);
+            setRequestIP(e.addresses[0]);
           }
         }
       });
