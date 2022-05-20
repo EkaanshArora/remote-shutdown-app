@@ -27,6 +27,10 @@ const Shutdown: React.FC = () => {
   const appState = useRef(AppState.currentState);
   const [appStateVisible, setAppStateVisible] = useState(appState.current);
 
+  const showToast = (type: string, text1: string, text2: string) => {
+    Toast.show({type, text1, text2});
+  };
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (
@@ -35,12 +39,10 @@ const Shutdown: React.FC = () => {
       ) {
         console.log('App has come to the foreground!');
       }
-
       appState.current = nextAppState;
       setAppStateVisible(appState.current);
       console.log('AppState', appState.current);
     });
-
     return () => {
       subscription.remove();
     };
@@ -101,7 +103,34 @@ const Shutdown: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const request = (mode: string) => {
+  const postRequest = (mode: string, json: string) => {
+    console.log(`http://${requestIP}:${port}/${password}/${mode}`, json);
+    fetch(`http://${requestIP}:${port}/${password}/${mode}`, {
+      body: json,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then(res => {
+        res.json().then(data => {
+          console.log(data);
+          if (data.status) {
+            showToast(data.status, data.status, data.data);
+          }
+        });
+      })
+      .catch(e => {
+        console.error(e);
+        showToast(
+          'error',
+          'Error',
+          'Fetch request error, check credentials and wifi',
+        );
+      });
+  };
+
+  const getRequest = (mode: string) => {
     console.log(`http://${requestIP}:${port}/${password}/${mode}`);
     fetch(`http://${requestIP}:${port}/${password}/${mode}`)
       .then(res => {
@@ -109,27 +138,19 @@ const Shutdown: React.FC = () => {
           console.log(data);
           if (data.data) {
             Clipboard.setString(data.data);
-            Toast.show({
-              type: 'success',
-              text1: data.data,
-              text2: 'Sent request successfully 👋',
-            });
+            showToast('success', data.data, 'Set clipboard successfully');
           } else {
-            Toast.show({
-              type: 'success',
-              text1: 'Success',
-              text2: 'Sent request successfully 👋',
-            });
+            showToast('success', 'Success', 'Set clipboard successfully');
           }
         });
       })
       .catch(e => {
         console.error(e);
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Fetch request error, check credentials and wifi',
-        });
+        showToast(
+          'error',
+          'Error',
+          'Fetch request error, check credentials and wifi',
+        );
       });
   };
 
@@ -153,34 +174,50 @@ const Shutdown: React.FC = () => {
         <View
           style={{
             flexDirection: 'row',
-            margin: 10,
+            margin: 0,
             justifyContent: 'space-around',
           }}>
           <Button
-            onPress={() => request('clip')}
-            title="Clipboard"
-            color="#ff99ff"
+            onPress={() =>
+              Clipboard.getString().then(str => {
+                postRequest('writeclip', JSON.stringify({clip: str}));
+              })
+            }
+            title="Send Clip"
+            color="#ff77cc"
           />
-          <Button onPress={() => request('screen')} title="Screen Off" />
+          <Button
+            onPress={() => getRequest('readclip')}
+            title="Get Clip"
+            color="#cc77ff"
+          />
         </View>
         <View
           style={{
             flexDirection: 'row',
-            margin: 10,
+            margin: 25,
             justifyContent: 'space-around',
           }}>
+          <Button onPress={() => getRequest('screen')} title="Screen Off" />
           <Button
-            onPress={() => request('sleep')}
+            onPress={() => getRequest('sleep')}
             title="Sleep"
             color="#ffbb00"
           />
+        </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            margin: 0,
+            justifyContent: 'space-around',
+          }}>
           <Button
-            onPress={() => request('shutdown')}
+            onPress={() => getRequest('shutdown')}
             title="Shutdown"
             color="#ff1157"
           />
           <Button
-            onPress={() => request('restart')}
+            onPress={() => getRequest('restart')}
             title="Restart"
             color="#00da55"
           />
