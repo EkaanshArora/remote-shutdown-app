@@ -2,6 +2,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {
   AppState,
+  Linking,
   SafeAreaView,
   Text,
   TouchableOpacity,
@@ -140,7 +141,38 @@ const Shutdown: React.FC = () => {
             Clipboard.setString(data.data);
             showToast('success', data.data, 'Set clipboard successfully');
           } else {
-            showToast('success', 'Success', 'Set clipboard successfully');
+            showToast('error', 'Error', 'no data');
+          }
+        });
+      })
+      .catch(e => {
+        console.error(e);
+        showToast(
+          'error',
+          'Error',
+          'Fetch request error, check credentials and wifi',
+        );
+      });
+  };
+
+  const openLink = () => {
+    console.log(`http://${requestIP}:${port}/${password}/readclip}`);
+    fetch(`http://${requestIP}:${port}/${password}/readclip`)
+      .then(res => {
+        res.json().then(data => {
+          console.log(data);
+          if (data.data) {
+            Clipboard.setString(data.data);
+            Linking.canOpenURL(data.data).then(supported => {
+              if (supported) {
+                showToast('success', data.data, 'Set clipboard successfully');
+                Linking.openURL(data.data);
+              } else {
+                showToast('error', data.data, "Don't know how to open URI");
+              }
+            });
+          } else {
+            showToast('error', 'Error', 'no data');
           }
         });
       })
@@ -221,6 +253,14 @@ const Shutdown: React.FC = () => {
             title="Restart"
             color="#00da55"
           />
+        </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            margin: 25,
+            justifyContent: 'space-around',
+          }}>
+          <Button onPress={openLink} title="Open Link" color="#ff7755" />
         </View>
         {settingsPanel ? (
           <Setup setSettingsPanel={setSettingsPanel} />
